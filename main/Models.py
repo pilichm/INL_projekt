@@ -133,7 +133,7 @@ def run_logistic_regression(train_filepath, test_filepath, max_iteration_count=1
 
     # Display confusion matrix for predicted values.
     if display_diagrams:
-        display_confusion_matrix(test_labels, test_labels)
+        display_confusion_matrix(test_labels, predictions)
 
 
 def run_nn(train_filepath, test_filepath, epoch_count=100, display_diagrams=False):
