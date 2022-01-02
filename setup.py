@@ -7,5 +7,5 @@ setup(
    author='Michal Pilichowski',
    author_email='',
    packages=['main'],
-   install_requires=['spacy==2.3.2', 'keras', 'numpy', 'pandas', 'tensorflow', 'matplotlib', 'sklearn', 'seaborn']
+   install_requires=['spacy==2.3.2', 'keras', 'numpy', 'pandas', 'tensorflow', 'matplotlib', 'sklearn', 'seaborn', 'sklearn_crfsuite']
 )
