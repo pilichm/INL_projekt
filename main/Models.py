@@ -4,6 +4,7 @@ import seaborn as sns
 import sklearn_crfsuite
 import tensorflow as tf
 from keras import layers, regularizers
+from keras.layers import Flatten
 from keras.models import Sequential
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.text import Tokenizer
@@ -15,6 +16,29 @@ from sklearn.model_selection import train_test_split
 from sklearn_crfsuite import metrics
 
 DATASET_COL_NAMES = ['ORDER_ID', 'TOKEN_ID', 'ORTH', 'LEMMA', 'POS', 'CTAG', 'LABEL', '_']
+
+
+def get_model(model_name, max_words, max_len, num_of_labels):
+    model = Sequential()
+
+    if model_name == 'dense':
+        model.add(layers.Embedding(max_words, 40, input_length=max_len))
+        model.add(layers.Flatten())
+        model.add(layers.Dense(30, activation='relu'))
+        model.add(layers.Dense(20, activation='relu'))
+        model.add(layers.Dense(10, activation='relu'))
+        model.add(layers.Dense(num_of_labels, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    elif model_name == 'lstm':
+        model.add(layers.Embedding(max_words, 40, input_length=max_len))
+        model.add(layers.Bidirectional(layers.LSTM(20, dropout=0.05)))
+        model.add(layers.Flatten())
+        model.add(layers.Dense(num_of_labels, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    else:
+        print(f'Passed invalid model name: {model_name}')
+
+    return model
 
 
 def load_train_test_data(train_filepath, test_filepath):
@@ -136,7 +160,7 @@ def run_logistic_regression(train_filepath, test_filepath, max_iteration_count=1
         display_confusion_matrix(test_labels, predictions)
 
 
-def run_nn(train_filepath, test_filepath, epoch_count=100, display_diagrams=False):
+def run_nn(train_filepath, test_filepath, model_name, epoch_count=100, display_diagrams=False):
     train_df, test_df = load_train_test_data(train_filepath, test_filepath)
 
     print("First rows of train data:")
@@ -161,9 +185,9 @@ def run_nn(train_filepath, test_filepath, epoch_count=100, display_diagrams=Fals
     print(train_df['LABEL'].value_counts())
 
     # Train data set value counts after balancing.
-    train_df = train_df.drop(train_df[train_df['LABEL'] == 'O'].sample(frac=.99).index)
-    print('Train ds values count:')
-    print(train_df['LABEL'].value_counts())
+    # train_df = train_df.drop(train_df[train_df['LABEL'] == 'O'].sample(frac=.95).index)
+    # print('Train ds values count:')
+    # print(train_df['LABEL'].value_counts())
 
     print('Test ds values count:')
     print(test_df['LABEL'].value_counts())
@@ -210,15 +234,7 @@ def run_nn(train_filepath, test_filepath, epoch_count=100, display_diagrams=Fals
     x_train, x_test, y_train, y_test = train_test_split(train_words, train_labels, random_state=0, test_size=0.3)
 
     # Create model.
-    model = Sequential()
-    model.add(layers.Embedding(max_words, 40, input_length=max_len))
-    model.add(layers.Conv1D(20, 6, activation='sigmoid', kernel_regularizer=regularizers.l1_l2(l1=2e-3, l2=2e-3),
-                            bias_regularizer=regularizers.l2(2e-5)))
-    model.add(layers.MaxPooling1D(5))
-    model.add(layers.Bidirectional(layers.LSTM(20, dropout=0.05)))
-    model.add(layers.Dense(num_of_labels, activation='sigmoid'))
-    model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
-                  metrics=[tf.keras.metrics.Precision(name='precision')])
+    model = get_model(model_name=model_name,  max_words=max_words, max_len=max_len, num_of_labels=num_of_labels)
 
     # Display model description.
     print(model.summary())
@@ -243,9 +259,15 @@ def run_nn(train_filepath, test_filepath, epoch_count=100, display_diagrams=Fals
     predictions = [item for item in predictions.astype(int)]
     test_labels = [item for item in test_labels.astype(int)]
 
+    print(f'Test values: {np.unique(test_labels)}')
+    print(f'Predicted values: {np.unique(predictions)}')
+
     for index in range(len(test_labels)):
         test_labels[index] = value_dict[test_labels[index]]
         predictions[index] = value_dict[predictions[index]]
+
+    print(f'Test values: {np.unique(test_labels)}')
+    print(f'Predicted values: {np.unique(predictions)}')
 
     # Display confusion matrix for predicted values.
     if display_diagrams:
